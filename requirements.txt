@@ -1,0 +1,7 @@
+pandas
+langchain-community
+langchain-google-genai
+langchain-chroma
+gTTS
+streamlit
+

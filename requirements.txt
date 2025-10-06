@@ -1,7 +1,6 @@
 streamlit
 pandas
 langchain
-chromadb
 langchain-google-genai
 sentence-transformers
 gTTS

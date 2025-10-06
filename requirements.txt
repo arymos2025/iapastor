@@ -1,9 +1,8 @@
 streamlit
 pandas
-langchain==0.2.1
-langchain-chroma==0.2.1
-langchain-community==0.2.1
-langchain-google-genai==1.1.0
-sentence-transformers==2.7.0
+langchain
+langchain-chroma
+langchain-google-genai
+sentence-transformers
 gTTS
 

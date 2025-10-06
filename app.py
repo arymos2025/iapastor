@@ -7,12 +7,29 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.documents import Document
 from langchain_google_genai import ChatGoogleGenerativeAI
+from sentence_transformers import SentenceTransformer # <--- MODELO PURO Y GRATUITO
 from gtts import gTTS
 import tempfile
 
-# --- CONFIGURACIÓN DE RUTAS Y MODELOS ---
+# --- CONFIGURACIÓN DE RUTAS ---
 CHROMA_DIR = "./chroma_db"
 BIBLIA_PATH = "biblia_procesada.csv"
+
+# --- CLASE ADAPTADORA PARA CHROMA (WRAPPER) ---
+# Necesitamos esta clase porque Chroma espera funciones específicas para embeddings.
+class CustomEmbeddings:
+    """Clase adaptadora que usa SentenceTransformer para LangChain/Chroma."""
+    def _init_(self, model_name='all-MiniLM-L6-v2'):
+        # Carga el modelo ultraligero (80MB) directamente
+        self.model = SentenceTransformer(model_name)
+        
+    def embed_documents(self, texts):
+        # Implementa la función que Chroma usa para vectorizar documentos
+        return self.model.encode(texts).tolist()
+
+    def embed_query(self, text):
+        # Implementa la función que Chroma usa para vectorizar consultas
+        return self.model.encode(text).tolist()
 
 # --- FUNCIÓN DE INICIALIZACIÓN (CACHING) ---
 @st.cache_resource
@@ -32,25 +49,25 @@ def inicializar_modelo():
         st.error(f"Error al cargar la Biblia: {e}")
         st.stop()
         
-    # 2. MODELO DE EMBEDDINGS (GRATUITO Y LOCAL - Soluciona error de facturación/Pydantic)
+    # 2. MODELO DE EMBEDDINGS (GRATUITO Y LOCAL)
     with st.spinner("Inicializando modelos y vectorizando la Biblia (esto puede tardar unos minutos)..."):
         try:
-            # Usamos HuggingFaceEmbeddings para que la vectorización sea gratuita
-            embedding_model = HuggingFaceEmbeddings(
-                model_name="sentence-transformers/all-MiniLM-L6-v2" # <--- CAMBIO CLAVE
-            )
+            # Usamos la clase adaptadora con el modelo ultraligero
+            embedding_model = CustomEmbeddings()
             
             # 3. CREACIÓN DE LA BASE DE DATOS VECTORIAL
+            # Creada solo en memoria para evitar el fallo de persistencia en Streamlit Cloud
             vector_store = Chroma.from_documents(
                 documents=documents,
-                embedding=embedding_model)
+                embedding=embedding_model
+            )
         except Exception as e:
-            st.error(f"Error en la vectorización (Línea 54): {e}. Verifica tu conexión o el archivo 'requirements.txt'.")
+            st.error(f"Error CRÍTICO en la vectorización: {e}. El entorno de Streamlit falló al descargar/usar el modelo.")
             st.stop()
 
     # 4. MODELO DE CHAT (USA LA CLAVE GEMINI_API_KEY)
     try:
-        # Recupera la clave de los secretos de Streamlit
+        # La clave todavía es necesaria para que el modelo Gemini genere la respuesta.
         google_api_key = st.secrets["GEMINI_API_KEY"] 
         llm = ChatGoogleGenerativeAI(
             model="gemini-2.5-flash", 
@@ -59,7 +76,7 @@ def inicializar_modelo():
         )
     except Exception:
         # Muestra el error si la clave no está o es inválida (solo para el chat)
-        st.error("Error de configuración: La clave GEMINI_API_KEY no es válida o no está configurada correctamente en los secretos de Streamlit. El chat no funcionará.")
+        st.error("Error de configuración: La clave GEMINI_API_KEY no es válida o no está configurada correctamente en los secretos de Streamlit.")
         st.stop()
 
 
@@ -102,23 +119,15 @@ def generar_audio(texto):
             audio_path = fp.name
         st.audio(audio_path)
         os.remove(audio_path) # Limpiar el archivo temporal
-    except Exception as e:
-        # El error cc1e6450-a466-493b-abc8-f5cb81f853ce es sobre archivos multimedia
-        st.warning("No se pudo generar el audio (MediaFileStorageError o problema de gTTS).")
-        # st.error(f"Error al generar audio: {e}")
+    except Exception:
+        st.warning("No se pudo generar el audio. El servicio de gTTS falló.")
 
 # --- INTERFAZ DE STREAMLIT ---
 def main():
     st.set_page_config(page_title="IA Pastor: Consejero Bíblico", layout="centered")
     
-    # NOTA: Reemplaza "ia_pastor_logo.png" con el nombre real de tu archivo de logo
-    # Si no tienes un logo, borra o comenta la línea st.image()
-    # El error cc1e6450-a466-493b-abc8-f5cb81f853ce sugiere que este archivo puede faltar.
-    try:
-        #st.image("ia_pastor_logo.png", width=100) 
-    except:
-        pass # Si falla, solo muestra el título sin la imagen
-        
+    # st.image("ia_pastor_logo.png", width=100) # Imagen desactivada para evitar errores de carga
+
     st.title("IA Pastor: Consejero Bíblico")
     st.markdown("Haz una pregunta y el Pastor IA responderá utilizando únicamente la Santa Biblia.")
 

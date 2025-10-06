@@ -116,7 +116,7 @@ def main():
     # Si no tienes un logo, borra o comenta la línea st.image()
     # El error cc1e6450-a466-493b-abc8-f5cb81f853ce sugiere que este archivo puede faltar.
     try:
-        st.image("ia_pastor_logo.png", width=100) 
+        #st.image("ia_pastor_logo.png", width=100) 
     except:
         pass # Si falla, solo muestra el título sin la imagen
         

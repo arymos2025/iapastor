@@ -45,7 +45,7 @@ def inicializar_modelo():
             vector_store = Chroma.from_documents(
                 documents=documents,
                 embedding=embedding_model,
-                persist_directory=CHROMA_DIR
+                #persist_directory=CHROMA_DIR
             )
         except Exception as e:
             st.error(f"Error en la vectorización (Línea 54): {e}. Verifica tu conexión o el archivo 'requirements.txt'.")

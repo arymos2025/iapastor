@@ -1,27 +1,25 @@
 import streamlit as st
 import pandas as pd
 import os
-from langchain.vectorstores import chroma
-from sentence_transformers import SentenceTransformer
+from langchain.vectorstores import Chroma  # <--- Importación estable desde la librería base
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.documents import Document
 from langchain_google_genai import ChatGoogleGenerativeAI
-from sentence_transformers import SentenceTransformer # <--- MODELO PURO Y GRATUITO
+from sentence_transformers import SentenceTransformer  # <--- Modelo puro y gratuito
 from gtts import gTTS
 import tempfile
 
 # --- CONFIGURACIÓN DE RUTAS ---
-CHROMA_DIR = "./chroma_db"
 BIBLIA_PATH = "biblia_procesada.csv"
 
 # --- CLASE ADAPTADORA PARA CHROMA (WRAPPER) ---
-# Necesitamos esta clase porque Chroma espera funciones específicas para embeddings.
+# Usamos SentenceTransformer directamente para evitar conflictos de Pydantic y versiones de LangChain.
 class CustomEmbeddings:
     """Clase adaptadora que usa SentenceTransformer para LangChain/Chroma."""
-    def _init_(self, model_name='all-MiniLM-L6-v2'):
-        # Carga el modelo ultraligero (80MB) directamente
+    def _init_(self, model_name='all-MiniLM-L12-v2'): # <--- MODELO ULTRALIGERO (60MB)
+        # Carga el modelo ultraligero directamente
         self.model = SentenceTransformer(model_name)
         
     def embed_documents(self, texts):
@@ -39,6 +37,7 @@ def inicializar_modelo():
     
     # 1. CARGA DE DATOS
     try:
+        # Verifica que el archivo de la Biblia esté en el mismo directorio
         df = pd.read_csv(BIBLIA_PATH)
         documents = []
         for _, row in df.iterrows():
@@ -57,19 +56,19 @@ def inicializar_modelo():
             embedding_model = CustomEmbeddings()
             
             # 3. CREACIÓN DE LA BASE DE DATOS VECTORIAL
-            # Creada solo en memoria para evitar el fallo de persistencia en Streamlit Cloud
-            vector_store = (
-            LangchainChroma.from_documents,
-            documents==documents,
-            embedding==embedding_model
+            # Creada solo en memoria para evitar el fallo de persistencia y memoria en Streamlit Cloud
+            vector_store = Chroma.from_documents(
+                documents=documents,
+                embedding=embedding_model
             )
         except Exception as e:
-            st.error(f"Error CRÍTICO en la vectorización: {e}. El entorno de Streamlit falló al descargar/usar el modelo.")
+            # Si Streamlit se queda sin memoria, mostrará este error explícito.
+            st.error(f"Error CRÍTICO en la vectorización: {e}. La memoria de Streamlit falló al procesar el modelo y la Biblia.")
             st.stop()
 
     # 4. MODELO DE CHAT (USA LA CLAVE GEMINI_API_KEY)
     try:
-        # La clave todavía es necesaria para que el modelo Gemini genere la respuesta.
+        # Se requiere la clave de secretos de Streamlit
         google_api_key = st.secrets["GEMINI_API_KEY"] 
         llm = ChatGoogleGenerativeAI(
             model="gemini-2.5-flash", 
@@ -77,8 +76,8 @@ def inicializar_modelo():
             google_api_key=google_api_key
         )
     except Exception:
-        # Muestra el error si la clave no está o es inválida (solo para el chat)
-        st.error("Error de configuración: La clave GEMINI_API_KEY no es válida o no está configurada correctamente en los secretos de Streamlit.")
+        # Muestra el error si la clave no está configurada
+        st.error("Error de configuración: La clave GEMINI_API_KEY no es válida o no está configurada en los secretos de Streamlit.")
         st.stop()
 
 

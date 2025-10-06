@@ -38,7 +38,7 @@ def inicializar_modelo():
         try:
             # Usamos HuggingFaceEmbeddings para que la vectorización sea gratuita
             embedding_model = HuggingFaceEmbeddings(
-                model_name="sentence-transformers/all-MiniLM-v2" # <--- CAMBIO CLAVE
+                model_name="sentence-transformers/all-MiniLM-L6-v2" # <--- CAMBIO CLAVE
             )
             
             # 3. CREACIÓN DE LA BASE DE DATOS VECTORIAL

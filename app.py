@@ -51,7 +51,7 @@ def inicializar_modelo():
 
     # 2. VECTORIZACIÓN (usando la clave del entorno)
     with st.spinner("Inicializando modelos y vectorizando la Biblia..."):
-        embedding_model = HuggingFaceEmbeddings(model="sentence-transformers/all-mpnet-base-v2")
+        embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-mpnet-base-v2")
         
         # En Streamlit Cloud, forzaremos la creación porque la base de datos no es persistente.
         vector_store = Chroma.from_documents(

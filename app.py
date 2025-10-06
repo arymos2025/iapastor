@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import os
-import chromadb
 from langchain.vectorstores import chroma
 from sentence_transformers import sentencetransformer
 from langchain_core.prompts import ChatPromptTemplate

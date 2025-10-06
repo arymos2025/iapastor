@@ -4,4 +4,4 @@ langchain-google-genai
 langchain-chroma
 gTTS
 streamlit
-
+sentence-transformers

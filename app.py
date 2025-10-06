@@ -151,5 +151,5 @@ def main():
         
         st.session_state.messages.append({"role": "assistant", "content": full_response})
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     main()

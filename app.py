@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 import os
-from langchain_chroma import Chroma
+import chromadb
+from langchain.vectorstores import chroma as LangchainChroma
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
@@ -57,7 +58,7 @@ def inicializar_modelo():
             
             # 3. CREACIÓN DE LA BASE DE DATOS VECTORIAL
             # Creada solo en memoria para evitar el fallo de persistencia en Streamlit Cloud
-            vector_store = Chroma.from_documents(
+            vector_store = LangchainChroma.from_documents,
                 documents=documents,
                 embedding=embedding_model
             )

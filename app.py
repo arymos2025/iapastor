@@ -3,7 +3,7 @@ import pandas as pd
 import streamlit as st # Importación de Streamlit
 from langchain_community.document_loaders import DataFrameLoader
 from langchain_chroma import Chroma 
-from langchain_google_genai.embeddings import GoogleGenerativeAIEmbeddings 
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.chains import create_retrieval_chain
@@ -51,7 +51,7 @@ def inicializar_modelo():
 
     # 2. VECTORIZACIÓN (usando la clave del entorno)
     with st.spinner("Inicializando modelos y vectorizando la Biblia..."):
-        embedding_model = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
+        embedding_model = HuggingFaceEmbeddings(model="sentence-transformers/all-mpnet-base-v2")
         
         # En Streamlit Cloud, forzaremos la creación porque la base de datos no es persistente.
         vector_store = Chroma.from_documents(

@@ -60,7 +60,7 @@ def inicializar_modelo():
             # 3. CREACIÓN DE LA BASE DE DATOS VECTORIAL
             # Creada solo en memoria para evitar el fallo de persistencia en Streamlit Cloud
             vector_store = (LangchainChroma.from_documents,
-                documents=documents,
+                documents==documents,
                 embedding=embedding_model
             )
         except Exception as e:

@@ -1,13 +1,13 @@
 import streamlit as st
 import pandas as pd
-# 🚨 CORRECCIÓN 1: Usamos pinecone_client para evitar el ModuleNotFoundError fatal en Streamlit
+# 🚨 Corrección 1: La clase debe ser "Pinecone" (con P mayúscula) para que Streamlit lo encuentre.
 from pinecone_client import Pinecone 
 from sentence_transformers import SentenceTransformer
 import random
 
 # --- 0. Configuración de la Página ---
 st.set_page_config(
-    page_title=" Tu Consejero Bíblico",
+    page_title="Buscador Bíblico Vectorial",
     page_icon="📖",
     layout="wide"
 )
@@ -28,6 +28,7 @@ def get_pinecone_index():
         PINECONE_API_KEY = st.secrets['pinecone']['api_key']
         INDEX_NAME = st.secrets['pinecone']['index_name']
         
+        # Conexión usando la clase Pinecone (P mayúscula)
         pc = Pinecone(api_key=PINECONE_API_KEY) 
         
         return pc.Index(INDEX_NAME)
@@ -36,7 +37,7 @@ def get_pinecone_index():
         st.error("Error de configuración: Asegúrate de que las claves 'api_key' e 'index_name' estén configuradas en la sección 'Secretos' de Streamlit Cloud, bajo la sección [pinecone].")
         st.stop()
     except Exception as e:
-        # Aseguramos que la aplicación se detenga si la conexión a Pinecone falla
+        # Esto atrapará errores como 'Invalid API Key' (401)
         st.error(f"Error al conectar con Pinecone. Revisa tus claves y el nombre del índice. Detalle: {e}")
         st.stop()
 
@@ -81,8 +82,7 @@ if query:
                 for match in response.matches:
                     metadata = match.metadata
                     
-                    # 🚨 CORRECCIÓN 2 (Contingencia): Intentamos todas las posibles claves para el texto
-                    # Si no se pudo sobrescribir, el texto está en 'texto', 'verso' o en la clave corregida 'texto_completo'
+                    # 🚨 Corrección 2 (Contingencia): Intentamos múltiples claves para el texto (soluciona error 'verso')
                     texto_del_verso = metadata.get('texto', metadata.get('verso', metadata.get('texto_completo', 'N/A')))
                     
                     results_list.append({
@@ -107,14 +107,13 @@ if query:
                 st.subheader("🥇 Verso Más Relevante")
                 best_match = df_results.iloc[0]
                 
-                # Muestra el texto completo y la referencia. Esto evita el error 'verso' en la tarjeta.
+                # Muestra el texto completo y la referencia. 
                 st.info(f"*{best_match['Texto']}\n\nReferencia:* {best_match['Libro']} {best_match['Capítulo']}:{best_match['Verso']} | Similitud: {best_match['Similitud']}")
                 
             else:
                 st.warning("No se encontraron versos con alta similitud para esta consulta.")
                 
         except Exception as e:
-            # Ahora este error solo debería saltar si falla la consulta Query, no por las claves internas
             st.error(f"Ocurrió un error durante la consulta a Pinecone. Detalle: {e}")
 
 else:
@@ -122,6 +121,6 @@ else:
 
 # --- Pie de página ---
 st.sidebar.markdown("---")
-# Usamos el nombre del índice de los secretos
+# 🚨 Corrección 3: Leemos el nombre del índice de st.secrets (soluciona el AttributeError de la línea 121)
 st.sidebar.markdown(f"Índice de Pinecone: *{st.secrets['pinecone']['index_name']}*") 
 st.sidebar.markdown("Proyecto de Búsqueda Semántica Bíblica.")

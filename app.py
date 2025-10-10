@@ -13,13 +13,13 @@ st.set_page_config(
 
 # --- 1. CONEXIÓN A PINECONE Y MODELO (USANDO st.secrets) ---
 
-@st.cache_resource # Asegura que el modelo solo se cargue una vez
+@st.cache_resource
 def get_embedding_model():
     """Carga el modelo de Sentence Transformer para vectorizar las consultas."""
     MODEL_NAME = "paraphrase-multilingual-mpnet-base-v2"
     return SentenceTransformer(MODEL_NAME)
 
-@st.cache_resource # Asegura que la conexión a Pinecone solo se haga una vez
+@st.cache_resource
 def get_pinecone_index():
     """Inicializa la conexión a Pinecone y retorna el índice."""
     try:
@@ -30,6 +30,7 @@ def get_pinecone_index():
         # Conexión moderna: solo con la API Key
         pc = Pinecone(api_key=PINECONE_API_KEY) 
         
+        # Retornamos el objeto índice
         return pc.Index(INDEX_NAME)
         
     except KeyError:
@@ -88,7 +89,7 @@ if query:
                     results_list.append({
                         "Similitud": f"{match.score:.4f}",
                         "Libro": metadata.get('libro', 'N/A'),
-                        "Verso": metadata.get('texto', 'N/A') # <--- CAMBIADO a 'Verso' y usando 'texto'
+                        "Verso": metadata.get('texto', 'N/A')
                     })
                 
                 df_results = pd.DataFrame(results_list)
@@ -97,7 +98,6 @@ if query:
                     df_results,
                     use_container_width=True,
                     hide_index=True,
-                    # Eliminado 'Sentimiento' de la visualización
                     column_order=('Similitud', 'Libro', 'Verso') 
                 )
                 
@@ -116,7 +116,7 @@ if query:
 else:
     st.info("Escribe tu consulta para empezar la búsqueda semántica en la Biblia.")
 
-# --- Pie de página ---
+# --- Pie de página (Línea problemática eliminada/comentada) ---
 st.sidebar.markdown("---")
-st.sidebar.markdown(f"Índice de Pinecone: *{index.name}*")
+# Línea eliminada para evitar el AttributeError con las versiones recientes de Pinecone
 st.sidebar.markdown("Proyecto de Búsqueda Semántica Bíblica.")

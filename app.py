@@ -89,7 +89,7 @@ if query:
                     results_list.append({
                         "Similitud": f"{match.score:.4f}",
                         "Libro": metadata.get('libro', 'N/A'),
-                        "Verso": metadata.get('texto', 'N/A')
+                        "Verso": metadata.get('verso', 'N/A')
                     })
                 
                 df_results = pd.DataFrame(results_list)

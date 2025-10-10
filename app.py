@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-# 🚨 Corrección 1: La clase debe ser "Pinecone" (con P mayúscula) para que Streamlit lo encuentre.
+# 🚨 Corrección 1: La clase debe ser "Pinecone" (con P mayúscula) para que Streamlit la encuentre.
 from pinecone_client import Pinecone 
 from sentence_transformers import SentenceTransformer
 import random
@@ -24,7 +24,7 @@ def get_embedding_model():
 def get_pinecone_index():
     """Inicializa la conexión a Pinecone y retorna el índice."""
     try:
-        # Lee la clave de API desde los secretos de Streamlit Cloud
+        # Lee la clave de API y el nombre del índice desde los secretos de Streamlit Cloud
         PINECONE_API_KEY = st.secrets['pinecone']['api_key']
         INDEX_NAME = st.secrets['pinecone']['index_name']
         
@@ -82,7 +82,8 @@ if query:
                 for match in response.matches:
                     metadata = match.metadata
                     
-                    # 🚨 Corrección 2 (Contingencia): Intentamos múltiples claves para el texto (soluciona error 'verso')
+                    # 🚨 Corrección 2: Intentamos múltiples claves para el texto (soluciona error 'verso')
+                    # Buscamos en 'texto', luego 'verso' (si está repetido), y finalmente en la clave correcta 'texto_completo'
                     texto_del_verso = metadata.get('texto', metadata.get('verso', metadata.get('texto_completo', 'N/A')))
                     
                     results_list.append({
@@ -121,6 +122,6 @@ else:
 
 # --- Pie de página ---
 st.sidebar.markdown("---")
-# 🚨 Corrección 3: Leemos el nombre del índice de st.secrets (soluciona el AttributeError de la línea 121)
+# 🚨 Corrección 3: Leemos el nombre del índice de st.secrets (soluciona el AttributeError)
 st.sidebar.markdown(f"Índice de Pinecone: *{st.secrets['pinecone']['index_name']}*") 
 st.sidebar.markdown("Proyecto de Búsqueda Semántica Bíblica.")

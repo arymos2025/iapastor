@@ -30,7 +30,6 @@ def get_pinecone_index():
         # Conexión moderna: solo con la API Key
         pc = Pinecone(api_key=PINECONE_API_KEY) 
         
-        # Retornamos el objeto índice
         return pc.Index(INDEX_NAME)
         
     except KeyError:
@@ -86,10 +85,13 @@ if query:
                 for match in response.matches:
                     metadata = match.metadata
                     
+                    # 🚨 LECTURA DE METADATOS: USAMOS CLAVES EN MINÚSCULAS
                     results_list.append({
                         "Similitud": f"{match.score:.4f}",
-                        "Libro": metadata.get('Libro', 'N/A'),
-                        "Verso": metadata.get('Verso', 'N/A')
+                        "Libro": metadata.get('libro', 'N/A'),
+                        "Capítulo": metadata.get('capitulo', 'N/A'),
+                        "Verso": metadata.get('verso', 'N/A'),
+                        "Texto": metadata.get('texto_completo', 'N/A') # <-- Muestra el texto completo
                     })
                 
                 df_results = pd.DataFrame(results_list)
@@ -98,25 +100,29 @@ if query:
                     df_results,
                     use_container_width=True,
                     hide_index=True,
-                    column_order=('Similitud', 'Libro', 'Verso') 
+                    # 🚨 column_order DEBE COINCIDIR CON LOS NOMBRES DEL DATAFRAME (Mayúscula Inicial)
+                    column_order=('Similitud', 'Libro', 'Capítulo', 'Verso', 'Texto') 
                 )
                 
                 # Destacar el mejor match
                 st.markdown("---")
                 st.subheader("🥇 Verso Más Relevante")
                 best_match = df_results.iloc[0]
-                st.info(f"*{best_match['Verso']}* ({best_match['Libro']} | Similitud: {best_match['Similitud']})")
+                
+                # Muestra el texto completo, seguido de la referencia (Libro Capítulo:Verso)
+                st.info(f"*{best_match['Texto']}\n\nReferencia:* {best_match['Libro']} {best_match['Capítulo']}:{best_match['Verso']} | Similitud: {best_match['Similitud']}")
                 
             else:
                 st.warning("No se encontraron versos con alta similitud para esta consulta.")
                 
         except Exception as e:
+            # Este error ahora solo saltará si las claves de la base de datos no coinciden
             st.error(f"Ocurrió un error durante la consulta a Pinecone. Detalle: {e}")
 
 else:
     st.info("Escribe tu consulta para empezar la búsqueda semántica en la Biblia.")
 
-# --- Pie de página (Línea problemática eliminada/comentada) ---
+# --- Pie de página ---
 st.sidebar.markdown("---")
-# Línea eliminada para evitar el AttributeError con las versiones recientes de Pinecone
+st.sidebar.markdown(f"Índice de Pinecone: *{INDEX_NAME}*")
 st.sidebar.markdown("Proyecto de Búsqueda Semántica Bíblica.")

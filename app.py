@@ -88,8 +88,8 @@ if query:
                     
                     results_list.append({
                         "Similitud": f"{match.score:.4f}",
-                        "Libro": metadata.get('libro', 'N/A'),
-                        "Verso": metadata.get('verso', 'N/A')
+                        "Libro": metadata.get('Libro', 'N/A'),
+                        "Verso": metadata.get('Verso', 'N/A')
                     })
                 
                 df_results = pd.DataFrame(results_list)
@@ -98,14 +98,14 @@ if query:
                     df_results,
                     use_container_width=True,
                     hide_index=True,
-                    column_order=('Similitud', 'libro', 'verso') 
+                    column_order=('Similitud', 'Libro', 'Verso') 
                 )
                 
                 # Destacar el mejor match
                 st.markdown("---")
                 st.subheader("🥇 Verso Más Relevante")
                 best_match = df_results.iloc[0]
-                st.info(f"*{best_match['verso']}* ({best_match['libro']} | Similitud: {best_match['Similitud']})")
+                st.info(f"*{best_match['Verso']}* ({best_match['Libro']} | Similitud: {best_match['Similitud']})")
                 
             else:
                 st.warning("No se encontraron versos con alta similitud para esta consulta.")

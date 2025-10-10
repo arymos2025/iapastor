@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
-from pinecone import pinecone
+# 🚨 CORRECCIÓN: Usamos pinecone_client para compatibilidad con la librería moderna
+from pinecone_client import Pinecone 
 from sentence_transformers import SentenceTransformer
 import random
 
@@ -23,11 +24,10 @@ def get_embedding_model():
 def get_pinecone_index():
     """Inicializa la conexión a Pinecone y retorna el índice."""
     try:
-        # Lee la clave de API desde los secretos de Streamlit Cloud
+        # Claves leídas de Streamlit Secrets (Asegúrate de que la sección [pinecone] esté bien)
         PINECONE_API_KEY = st.secrets['pinecone']['api_key']
         INDEX_NAME = st.secrets['pinecone']['index_name']
         
-        # Conexión moderna: solo con la API Key
         pc = Pinecone(api_key=PINECONE_API_KEY) 
         
         return pc.Index(INDEX_NAME)
@@ -36,10 +36,10 @@ def get_pinecone_index():
         st.error("Error de configuración: Asegúrate de que las claves 'api_key' e 'index_name' estén configuradas en la sección 'Secretos' de Streamlit Cloud, bajo la sección [pinecone].")
         st.stop()
     except Exception as e:
-        st.error(f"Error al conectar con Pinecone. Revisa tus claves y el nombre del índice. Detalle: {e}")
+        st.error(f"Error al conectar con Pinecone. Detalle: {e}")
         st.stop()
 
-# Cargar el modelo y la conexión al inicio
+# Cargar el modelo y la conexión
 model = get_embedding_model()
 index = get_pinecone_index()
 
@@ -49,14 +49,12 @@ st.markdown("""
 Escribe una *frase, **emoción* o *concepto* (ej: *'cómo encontrar paz') y la aplicación buscará los **versos* más similares semánticamente.
 """)
 
-# Campo de entrada de usuario
 query = st.text_input(
     "Escribe tu consulta o sentimiento:",
     placeholder="Ej: Necesito fortaleza para afrontar un desafío difícil.",
     key="user_query"
 )
 
-# Número de resultados a mostrar (en la barra lateral)
 top_k = st.sidebar.slider(
     "Número de versos a mostrar:",
     min_value=1, max_value=15, value=5
@@ -67,17 +65,14 @@ top_k = st.sidebar.slider(
 if query:
     with st.spinner(f"Buscando los {top_k} versos más relevantes..."):
         try:
-            # 1. Vectorizar la consulta del usuario
             query_vector = model.encode(query).tolist()
             
-            # 2. Consultar el índice de Pinecone
             response = index.query(
                 vector=query_vector,
                 top_k=top_k,
                 include_metadata=True 
             )
 
-            # 3. Procesar los resultados y presentarlos
             if response and response.matches:
                 st.subheader(f"Resultados de búsqueda por similitud para: *'{query}'*")
                 
@@ -85,13 +80,14 @@ if query:
                 for match in response.matches:
                     metadata = match.metadata
                     
-                    # 🚨 LECTURA DE METADATOS: USAMOS CLAVES EN MINÚSCULAS
+                    # 🚨 LECTURA DE CONTINGENCIA: Intentamos las claves que probablemente tiene tu índice sin sobrescribir.
                     results_list.append({
                         "Similitud": f"{match.score:.4f}",
                         "Libro": metadata.get('libro', 'N/A'),
                         "Capítulo": metadata.get('capitulo', 'N/A'),
                         "Verso": metadata.get('verso', 'N/A'),
-                        "Texto": metadata.get('texto_completo', 'N/A') # <-- Muestra el texto completo
+                        # Buscamos 'texto', 'verso', y luego 'texto_completo'
+                        "Texto": metadata.get('texto', metadata.get('verso', metadata.get('texto_completo', 'N/A'))) 
                     })
                 
                 df_results = pd.DataFrame(results_list)
@@ -100,8 +96,8 @@ if query:
                     df_results,
                     use_container_width=True,
                     hide_index=True,
-                    # 🚨 column_order DEBE COINCIDIR CON LOS NOMBRES DEL DATAFRAME (Mayúscula Inicial)
-                    column_order=('Similitud', 'libro', 'capítulo', 'verso', 'texto') 
+                    # Las columnas del DataFrame deben coincidir con la lista de resultados
+                    column_order=('Similitud', 'Libro', 'Capítulo', 'Verso', 'Texto') 
                 )
                 
                 # Destacar el mejor match
@@ -109,14 +105,14 @@ if query:
                 st.subheader("🥇 Verso Más Relevante")
                 best_match = df_results.iloc[0]
                 
-                # Muestra el texto completo, seguido de la referencia (Libro Capítulo:Verso)
-                st.info(f"*{best_match['texto']}\n\nReferencia:* {best_match['libro']} {best_match['capítulo']}:{best_match['verso']} | similitud: {best_match['similitud']}")
+                # Muestra el texto completo y la referencia (que ahora lee la clave de contingencia)
+                st.info(f"*{best_match['Texto']}\n\nReferencia:* {best_match['Libro']} {best_match['Capítulo']}:{best_match['Verso']} | Similitud: {best_match['Similitud']}")
                 
             else:
                 st.warning("No se encontraron versos con alta similitud para esta consulta.")
                 
         except Exception as e:
-            # Este error ahora solo saltará si las claves de la base de datos no coinciden
+            # Ahora el error solo debería saltar por la conexión, no por las claves internas
             st.error(f"Ocurrió un error durante la consulta a Pinecone. Detalle: {e}")
 
 else:
@@ -124,5 +120,5 @@ else:
 
 # --- Pie de página ---
 st.sidebar.markdown("---")
-st.sidebar.markdown(f"Índice de Pinecone: *{INDEX_NAME}*")
+st.sidebar.markdown(f"Índice de Pinecone: *{st.secrets['pinecone']['index_name']}*") 
 st.sidebar.markdown("Proyecto de Búsqueda Semántica Bíblica.")

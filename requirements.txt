@@ -1,6 +1,6 @@
 streamlit
 pandas
 sentence-transformers
-pinecone
+pinecone-client
 
 

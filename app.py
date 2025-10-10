@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-# 🚨 CAMBIO CRÍTICO: Usamos el paquete antiguo 'pinecone' ya que Streamlit lo instala.
-import pinecone 
+# 🚨 Usamos el paquete oficial y moderno, ya que la librería antigua está obsoleta y da errores de inicialización.
+from pinecone_client import Pinecone 
 from sentence_transformers import SentenceTransformer
 import random
 
@@ -24,24 +24,17 @@ def get_embedding_model():
 def get_pinecone_index():
     """Inicializa la conexión a Pinecone y retorna el índice."""
     try:
+        # Lee la clave de API desde los secretos de Streamlit Cloud
         PINECONE_API_KEY = st.secrets['pinecone']['api_key']
         INDEX_NAME = st.secrets['pinecone']['index_name']
         
-        # 🚨 CAMBIO CRÍTICO: La librería antigua necesita el 'environment'.
-        PINECONE_ENVIRONMENT = st.secrets['pinecone']['environment'] 
+        # Inicialización moderna (pc = Pinecone(...)) exigida por la librería
+        pc = Pinecone(api_key=PINECONE_API_KEY) 
         
-        # Inicializamos la librería antigua
-        pinecone.init(
-            api_key=PINECONE_API_KEY, 
-            environment=PINECONE_ENVIRONMENT 
-        ) 
-        
-        # Usamos el objeto Index de la librería antigua
-        return pinecone.Index(INDEX_NAME)
+        return pc.Index(INDEX_NAME)
         
     except KeyError:
-        # Error si falta api_key, index_name o environment
-        st.error("Error de configuración: Asegúrate de que las claves 'api_key', 'index_name' y 'environment' estén configuradas en la sección 'Secretos' de Streamlit Cloud, bajo la sección [pinecone].")
+        st.error("Error de configuración: Asegúrate de que las claves 'api_key' e 'index_name' estén configuradas en la sección 'Secretos' de Streamlit Cloud, bajo la sección [pinecone].")
         st.stop()
     except Exception as e:
         st.error(f"Error al conectar con Pinecone. Revisa tus claves y el nombre del índice. Detalle: {e}")
@@ -75,7 +68,6 @@ if query:
         try:
             query_vector = model.encode(query).tolist()
             
-            # La función index.query() es igual en ambas librerías
             response = index.query(
                 vector=query_vector,
                 top_k=top_k,
@@ -89,8 +81,7 @@ if query:
                 for match in response.matches:
                     metadata = match.metadata
                     
-                    # 🚨 LÓGICA DE CONTINGENCIA: Intentamos múltiples claves para el texto
-                    # Esto soluciona el error 'verso' que tenías en tu índice no actualizado.
+                    # 🚨 LÓGICA DE CONTINGENCIA: Intentamos múltiples claves para el texto (soluciona error 'verso')
                     texto_del_verso = metadata.get('texto', metadata.get('verso', metadata.get('texto_completo', 'N/A')))
                     
                     results_list.append({

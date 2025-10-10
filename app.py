@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 # 🚨 CORRECCIÓN 1: Usamos pinecone_client para evitar el ModuleNotFoundError fatal en Streamlit
-from pinecone_client import Pinecone 
+from pinecone_client import pinecone 
 from sentence_transformers import SentenceTransformer
 import random
 

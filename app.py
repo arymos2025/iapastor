@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from pinecone import Pinecone
+from pinecone import pinecone
 from sentence_transformers import SentenceTransformer
 import random
 

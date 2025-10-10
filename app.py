@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-# 🚨 CAMBIO DE CONTINGENCIA: Usamos la librería antigua
-import pinecone 
+import os # Importamos os para la corrección del OSError
+import pinecone # Versión de contingencia
 from sentence_transformers import SentenceTransformer
 import random
 
@@ -16,32 +16,43 @@ st.set_page_config(
 
 @st.cache_resource
 def get_embedding_model():
-    """Carga el modelo de Sentence Transformer para vectorizar las consultas."""
+    """
+    Carga el modelo de Sentence Transformer para vectorizar las consultas.
+    Aplica la corrección para el OSError: PermissionError.
+    """
     MODEL_NAME = "paraphrase-multilingual-mpnet-base-v2"
+    
+    # 🚨 CORRECCIÓN PARA EL OSERROR: Establecemos una carpeta de caché dentro de la app (model_cache), que sí tiene permisos.
+    os.environ['SENTENCE_TRANSFORMERS_HOME'] = '/app/model_cache'
+    
     return SentenceTransformer(MODEL_NAME)
 
 @st.cache_resource
 def get_pinecone_index():
-    """Inicializa la conexión a Pinecone y retorna el índice."""
+    """
+    Inicializa la conexión a Pinecone usando la librería antigua de contingencia.
+    """
     try:
         # Lee las claves desde los Secretos 
-        # ATENCIÓN: Esta forma de leer los secretos es de Streamlit Cloud.
-        # Si da error en Hugging Face, tendremos que usar os.environ (ver nota final).
         PINECONE_API_KEY = st.secrets['pinecone']['api_key']
         INDEX_NAME = st.secrets['pinecone']['index_name']
-        REGION = "us-east-1" # Asumimos la región por la captura de tu índice
         
-        # 🚨 Inicialización de CONTINGENCIA con la librería antigua (pinecone)
-        # Esto nos permite obtener el índice, si la librería antigua arranca.
+        # Necesitamos el ENVIRONMENT/REGION para la librería antigua.
+        # Basado en tu índice, la región es 'us-east-1'.
+        REGION = "us-east-1"
+        
+        # 🚨 Inicialización de CONTINGENCIA con el formato de la librería antigua (pinecone.init)
         pinecone.init(api_key=PINECONE_API_KEY, environment=REGION)
         
+        # Retorna el índice (la parte de .Index() es igual en ambas librerías)
         return pinecone.Index(INDEX_NAME)
         
     except KeyError:
-        st.error("Error de configuración: Asegúrate de que las claves 'api_key' e 'index_name' estén configuradas en los Secretos de Hugging Face bajo la sección [pinecone].")
+        st.error("Error de configuración: Asegúrate de que las claves 'api_key' e 'index_name' estén configuradas en los Secretos bajo la sección [pinecone].")
         st.stop()
     except Exception as e:
-        st.error(f"Ocurrió un error al conectar/inicializar Pinecone. Detalle: {e}")
+        # Aquí caerá si el paquete 'pinecone' es la versión más reciente que da el error de "init is no longer a top-level attribute"
+        st.error(f"Ocurrió un error al conectar/inicializar Pinecone. Detalle: {e}. Si el error es 'init is no longer...', la librería 'pinecone' también es obsoleta.")
         st.stop()
 
 # Cargar el modelo y la conexión
@@ -49,7 +60,6 @@ model = get_embedding_model()
 index = get_pinecone_index()
 
 # --- 2. Interfaz Principal y Búsqueda ---
-# ... (El resto del código de la interfaz es el mismo) ...
 st.title("📖 Buscador Bíblico Vectorial (Semantic Search)")
 st.markdown("""
 Escribe una *frase, **emoción* o *concepto* (ej: *'cómo encontrar paz') y la aplicación buscará los **versos* más similares semánticamente.
@@ -86,7 +96,8 @@ if query:
                 for match in response.matches:
                     metadata = match.metadata
                     
-                    # 🚨 CORRECCIÓN DE LÓGICA: Lógica de contingencia para obtener el texto completo
+                    # 🚨 CORRECCIÓN FINAL DE LÓGICA: Lógica de contingencia para obtener el texto completo
+                    # Esto resuelve el error original de texto incompleto/error de clave ('verso')
                     texto_del_verso = metadata.get('texto', metadata.get('verso', metadata.get('texto_completo', 'N/A')))
                     
                     results_list.append({
@@ -117,7 +128,6 @@ if query:
                 st.warning("No se encontraron versos con alta similitud para esta consulta.")
                 
         except Exception as e:
-            # Si aquí da un error, es el error original del texto incompleto ('verso')
             st.error(f"Ocurrió un error durante la consulta a Pinecone. Detalle: {e}")
 
 else:

@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-# 🚨 CORRECCIÓN: Usamos pinecone_client para compatibilidad con la librería moderna
+# 🚨 CORRECCIÓN 1: Usamos pinecone_client para evitar el ModuleNotFoundError fatal en Streamlit
 from pinecone_client import Pinecone 
 from sentence_transformers import SentenceTransformer
 import random
@@ -24,7 +24,7 @@ def get_embedding_model():
 def get_pinecone_index():
     """Inicializa la conexión a Pinecone y retorna el índice."""
     try:
-        # Claves leídas de Streamlit Secrets (Asegúrate de que la sección [pinecone] esté bien)
+        # Lee la clave de API desde los secretos de Streamlit Cloud
         PINECONE_API_KEY = st.secrets['pinecone']['api_key']
         INDEX_NAME = st.secrets['pinecone']['index_name']
         
@@ -36,7 +36,8 @@ def get_pinecone_index():
         st.error("Error de configuración: Asegúrate de que las claves 'api_key' e 'index_name' estén configuradas en la sección 'Secretos' de Streamlit Cloud, bajo la sección [pinecone].")
         st.stop()
     except Exception as e:
-        st.error(f"Error al conectar con Pinecone. Detalle: {e}")
+        # Aseguramos que la aplicación se detenga si la conexión a Pinecone falla
+        st.error(f"Error al conectar con Pinecone. Revisa tus claves y el nombre del índice. Detalle: {e}")
         st.stop()
 
 # Cargar el modelo y la conexión
@@ -80,14 +81,16 @@ if query:
                 for match in response.matches:
                     metadata = match.metadata
                     
-                    # 🚨 LECTURA DE CONTINGENCIA: Intentamos las claves que probablemente tiene tu índice sin sobrescribir.
+                    # 🚨 CORRECCIÓN 2 (Contingencia): Intentamos todas las posibles claves para el texto
+                    # Si no se pudo sobrescribir, el texto está en 'texto', 'verso' o en la clave corregida 'texto_completo'
+                    texto_del_verso = metadata.get('texto', metadata.get('verso', metadata.get('texto_completo', 'N/A')))
+                    
                     results_list.append({
                         "Similitud": f"{match.score:.4f}",
                         "Libro": metadata.get('libro', 'N/A'),
                         "Capítulo": metadata.get('capitulo', 'N/A'),
                         "Verso": metadata.get('verso', 'N/A'),
-                        # Buscamos 'texto', 'verso', y luego 'texto_completo'
-                        "Texto": metadata.get('texto', metadata.get('verso', metadata.get('texto_completo', 'N/A'))) 
+                        "Texto": texto_del_verso
                     })
                 
                 df_results = pd.DataFrame(results_list)
@@ -96,7 +99,6 @@ if query:
                     df_results,
                     use_container_width=True,
                     hide_index=True,
-                    # Las columnas del DataFrame deben coincidir con la lista de resultados
                     column_order=('Similitud', 'Libro', 'Capítulo', 'Verso', 'Texto') 
                 )
                 
@@ -105,14 +107,14 @@ if query:
                 st.subheader("🥇 Verso Más Relevante")
                 best_match = df_results.iloc[0]
                 
-                # Muestra el texto completo y la referencia (que ahora lee la clave de contingencia)
+                # Muestra el texto completo y la referencia. Esto evita el error 'verso' en la tarjeta.
                 st.info(f"*{best_match['Texto']}\n\nReferencia:* {best_match['Libro']} {best_match['Capítulo']}:{best_match['Verso']} | Similitud: {best_match['Similitud']}")
                 
             else:
                 st.warning("No se encontraron versos con alta similitud para esta consulta.")
                 
         except Exception as e:
-            # Ahora el error solo debería saltar por la conexión, no por las claves internas
+            # Ahora este error solo debería saltar si falla la consulta Query, no por las claves internas
             st.error(f"Ocurrió un error durante la consulta a Pinecone. Detalle: {e}")
 
 else:
@@ -120,5 +122,6 @@ else:
 
 # --- Pie de página ---
 st.sidebar.markdown("---")
+# Usamos el nombre del índice de los secretos
 st.sidebar.markdown(f"Índice de Pinecone: *{st.secrets['pinecone']['index_name']}*") 
 st.sidebar.markdown("Proyecto de Búsqueda Semántica Bíblica.")

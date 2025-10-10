@@ -101,7 +101,7 @@ if query:
                     use_container_width=True,
                     hide_index=True,
                     # 🚨 column_order DEBE COINCIDIR CON LOS NOMBRES DEL DATAFRAME (Mayúscula Inicial)
-                    column_order=('Similitud', 'Libro', 'Capítulo', 'Verso', 'Texto') 
+                    column_order=('Similitud', 'libro', 'capítulo', 'verso', 'texto') 
                 )
                 
                 # Destacar el mejor match
@@ -110,7 +110,7 @@ if query:
                 best_match = df_results.iloc[0]
                 
                 # Muestra el texto completo, seguido de la referencia (Libro Capítulo:Verso)
-                st.info(f"*{best_match['Texto']}\n\nReferencia:* {best_match['Libro']} {best_match['Capítulo']}:{best_match['Verso']} | Similitud: {best_match['Similitud']}")
+                st.info(f"*{best_match['texto']}\n\nReferencia:* {best_match['libro']} {best_match['capítulo']}:{best_match['verso']} | similitud: {best_match['similitud']}")
                 
             else:
                 st.warning("No se encontraron versos con alta similitud para esta consulta.")

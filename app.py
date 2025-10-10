@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-# 🚨 Corrección 1: La clase debe ser "Pinecone" (con P mayúscula) para que Streamlit la encuentre.
-from pinecone_client import Pinecone 
+# 🚨 CAMBIO CRÍTICO: Usamos el paquete antiguo 'pinecone' ya que Streamlit lo instala.
+import pinecone 
 from sentence_transformers import SentenceTransformer
 import random
 
@@ -24,20 +24,26 @@ def get_embedding_model():
 def get_pinecone_index():
     """Inicializa la conexión a Pinecone y retorna el índice."""
     try:
-        # Lee la clave de API y el nombre del índice desde los secretos de Streamlit Cloud
         PINECONE_API_KEY = st.secrets['pinecone']['api_key']
         INDEX_NAME = st.secrets['pinecone']['index_name']
         
-        # Conexión usando la clase Pinecone (P mayúscula)
-        pc = Pinecone(api_key=PINECONE_API_KEY) 
+        # 🚨 CAMBIO CRÍTICO: La librería antigua necesita el 'environment'.
+        PINECONE_ENVIRONMENT = st.secrets['pinecone']['environment'] 
         
-        return pc.Index(INDEX_NAME)
+        # Inicializamos la librería antigua
+        pinecone.init(
+            api_key=PINECONE_API_KEY, 
+            environment=PINECONE_ENVIRONMENT 
+        ) 
+        
+        # Usamos el objeto Index de la librería antigua
+        return pinecone.Index(INDEX_NAME)
         
     except KeyError:
-        st.error("Error de configuración: Asegúrate de que las claves 'api_key' e 'index_name' estén configuradas en la sección 'Secretos' de Streamlit Cloud, bajo la sección [pinecone].")
+        # Error si falta api_key, index_name o environment
+        st.error("Error de configuración: Asegúrate de que las claves 'api_key', 'index_name' y 'environment' estén configuradas en la sección 'Secretos' de Streamlit Cloud, bajo la sección [pinecone].")
         st.stop()
     except Exception as e:
-        # Esto atrapará errores como 'Invalid API Key' (401)
         st.error(f"Error al conectar con Pinecone. Revisa tus claves y el nombre del índice. Detalle: {e}")
         st.stop()
 
@@ -69,6 +75,7 @@ if query:
         try:
             query_vector = model.encode(query).tolist()
             
+            # La función index.query() es igual en ambas librerías
             response = index.query(
                 vector=query_vector,
                 top_k=top_k,
@@ -82,8 +89,8 @@ if query:
                 for match in response.matches:
                     metadata = match.metadata
                     
-                    # 🚨 Corrección 2: Intentamos múltiples claves para el texto (soluciona error 'verso')
-                    # Buscamos en 'texto', luego 'verso' (si está repetido), y finalmente en la clave correcta 'texto_completo'
+                    # 🚨 LÓGICA DE CONTINGENCIA: Intentamos múltiples claves para el texto
+                    # Esto soluciona el error 'verso' que tenías en tu índice no actualizado.
                     texto_del_verso = metadata.get('texto', metadata.get('verso', metadata.get('texto_completo', 'N/A')))
                     
                     results_list.append({
@@ -108,7 +115,6 @@ if query:
                 st.subheader("🥇 Verso Más Relevante")
                 best_match = df_results.iloc[0]
                 
-                # Muestra el texto completo y la referencia. 
                 st.info(f"*{best_match['Texto']}\n\nReferencia:* {best_match['Libro']} {best_match['Capítulo']}:{best_match['Verso']} | Similitud: {best_match['Similitud']}")
                 
             else:
@@ -122,6 +128,6 @@ else:
 
 # --- Pie de página ---
 st.sidebar.markdown("---")
-# 🚨 Corrección 3: Leemos el nombre del índice de st.secrets (soluciona el AttributeError)
+# 🚨 Corrección Final: Leemos el nombre del índice de st.secrets (soluciona el AttributeError)
 st.sidebar.markdown(f"Índice de Pinecone: *{st.secrets['pinecone']['index_name']}*") 
 st.sidebar.markdown("Proyecto de Búsqueda Semántica Bíblica.")

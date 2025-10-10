@@ -98,14 +98,14 @@ if query:
                     df_results,
                     use_container_width=True,
                     hide_index=True,
-                    column_order=('Similitud', 'Libro', 'Verso') 
+                    column_order=('Similitud', 'libro', 'verso') 
                 )
                 
                 # Destacar el mejor match
                 st.markdown("---")
                 st.subheader("🥇 Verso Más Relevante")
                 best_match = df_results.iloc[0]
-                st.info(f"*{best_match['Verso']}* ({best_match['Libro']} | Similitud: {best_match['Similitud']})")
+                st.info(f"*{best_match['verso']}* ({best_match['libro']} | Similitud: {best_match['Similitud']})")
                 
             else:
                 st.warning("No se encontraron versos con alta similitud para esta consulta.")

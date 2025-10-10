@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-# 🚨 Usamos el paquete oficial y moderno, ya que la librería antigua está obsoleta y da errores de inicialización.
-from pinecone_client import Pinecone 
+# 🚨 CAMBIO DE CONTINGENCIA: Usamos la librería antigua
+import pinecone 
 from sentence_transformers import SentenceTransformer
 import random
 
@@ -24,20 +24,24 @@ def get_embedding_model():
 def get_pinecone_index():
     """Inicializa la conexión a Pinecone y retorna el índice."""
     try:
-        # Lee la clave de API desde los secretos de Streamlit Cloud
+        # Lee las claves desde los Secretos 
+        # ATENCIÓN: Esta forma de leer los secretos es de Streamlit Cloud.
+        # Si da error en Hugging Face, tendremos que usar os.environ (ver nota final).
         PINECONE_API_KEY = st.secrets['pinecone']['api_key']
         INDEX_NAME = st.secrets['pinecone']['index_name']
+        REGION = "us-east-1" # Asumimos la región por la captura de tu índice
         
-        # Inicialización moderna (pc = Pinecone(...)) exigida por la librería
-        pc = Pinecone(api_key=PINECONE_API_KEY) 
+        # 🚨 Inicialización de CONTINGENCIA con la librería antigua (pinecone)
+        # Esto nos permite obtener el índice, si la librería antigua arranca.
+        pinecone.init(api_key=PINECONE_API_KEY, environment=REGION)
         
-        return pc.Index(INDEX_NAME)
+        return pinecone.Index(INDEX_NAME)
         
     except KeyError:
-        st.error("Error de configuración: Asegúrate de que las claves 'api_key' e 'index_name' estén configuradas en la sección 'Secretos' de Streamlit Cloud, bajo la sección [pinecone].")
+        st.error("Error de configuración: Asegúrate de que las claves 'api_key' e 'index_name' estén configuradas en los Secretos de Hugging Face bajo la sección [pinecone].")
         st.stop()
     except Exception as e:
-        st.error(f"Error al conectar con Pinecone. Revisa tus claves y el nombre del índice. Detalle: {e}")
+        st.error(f"Ocurrió un error al conectar/inicializar Pinecone. Detalle: {e}")
         st.stop()
 
 # Cargar el modelo y la conexión
@@ -45,6 +49,7 @@ model = get_embedding_model()
 index = get_pinecone_index()
 
 # --- 2. Interfaz Principal y Búsqueda ---
+# ... (El resto del código de la interfaz es el mismo) ...
 st.title("📖 Buscador Bíblico Vectorial (Semantic Search)")
 st.markdown("""
 Escribe una *frase, **emoción* o *concepto* (ej: *'cómo encontrar paz') y la aplicación buscará los **versos* más similares semánticamente.
@@ -81,7 +86,7 @@ if query:
                 for match in response.matches:
                     metadata = match.metadata
                     
-                    # 🚨 LÓGICA DE CONTINGENCIA: Intentamos múltiples claves para el texto (soluciona error 'verso')
+                    # 🚨 CORRECCIÓN DE LÓGICA: Lógica de contingencia para obtener el texto completo
                     texto_del_verso = metadata.get('texto', metadata.get('verso', metadata.get('texto_completo', 'N/A')))
                     
                     results_list.append({
@@ -89,7 +94,7 @@ if query:
                         "Libro": metadata.get('libro', 'N/A'),
                         "Capítulo": metadata.get('capitulo', 'N/A'),
                         "Verso": metadata.get('verso', 'N/A'),
-                        "Texto": texto_del_verso
+                        "Texto": texto_del_verso 
                     })
                 
                 df_results = pd.DataFrame(results_list)
@@ -112,6 +117,7 @@ if query:
                 st.warning("No se encontraron versos con alta similitud para esta consulta.")
                 
         except Exception as e:
+            # Si aquí da un error, es el error original del texto incompleto ('verso')
             st.error(f"Ocurrió un error durante la consulta a Pinecone. Detalle: {e}")
 
 else:
@@ -119,6 +125,5 @@ else:
 
 # --- Pie de página ---
 st.sidebar.markdown("---")
-# 🚨 Corrección Final: Leemos el nombre del índice de st.secrets (soluciona el AttributeError)
 st.sidebar.markdown(f"Índice de Pinecone: *{st.secrets['pinecone']['index_name']}*") 
 st.sidebar.markdown("Proyecto de Búsqueda Semántica Bíblica.")

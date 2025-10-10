@@ -1,7 +1,11 @@
-streamlit
-pandas
+streamlit>=1.36.0
+pandas>=2.2.0
 langchain
 langchain-google-genai
-sentence-transformers
+langchain-pinecone
+Pinecone
+sentence-transformers>=2.7.0
 gTTS
+Pinecone-client>=3.2.2
+
 

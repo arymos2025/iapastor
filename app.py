@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 # 🚨 Corrección 1: La clase debe ser "Pinecone" (con P mayúscula) para que Streamlit la encuentre.
-from load_pinecone import Pinecone 
+import Pinecone 
+import pinecone_client
 from sentence_transformers import SentenceTransformer
 import random
 

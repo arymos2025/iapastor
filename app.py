@@ -1,13 +1,13 @@
 import streamlit as st
 import pandas as pd
 # 🚨 CORRECCIÓN 1: Usamos pinecone_client para evitar el ModuleNotFoundError fatal en Streamlit
-from pinecone_client import pinecone 
+from pinecone_client import Pinecone 
 from sentence_transformers import SentenceTransformer
 import random
 
 # --- 0. Configuración de la Página ---
 st.set_page_config(
-    page_title="Buscador Bíblico Vectorial",
+    page_title=" Tu Consejero Bíblico",
     page_icon="📖",
     layout="wide"
 )
